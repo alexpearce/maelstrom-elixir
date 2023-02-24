@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd $SCRIPT_DIR/..
+# `mix compile` consumes stdin by default, so give it /dev/null to consume instead.
+mix compile 1>&2 < /dev/null
+exec mix run --no-compile scripts/server.exs

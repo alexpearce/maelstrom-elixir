@@ -1,21 +1,20 @@
-# Maelstrom
+# Maelstrom in Elixir
 
-**TODO: Add description**
+An Elixir implementation of servers that handle [Maelstrom][maelstrom]
+workloads.
 
-## Installation
+[maelstrom]: https://github.com/jepsen-io/maelstrom
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `maelstrom` to your list of dependencies in `mix.exs`:
+## Running
 
-```elixir
-def deps do
-  [
-    {:maelstrom, "~> 0.1.0"}
-  ]
-end
-```
+This project uses [Nix][nix] to define its dependencies and [direnv][direnv] to
+automatically load them upon entering the project directory.
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/maelstrom>.
+Clone the repository, enter the directory, and run `direnv allow` to get
+get the environment up and running.
+
+Run `bin/maelstrom` to run the tests against the echo server.
+
+[nix]: https://nixos.org/
+[direnv]: https://direnv.net/
 

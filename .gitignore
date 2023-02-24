@@ -1,0 +1,4 @@
+# direnv cache.
+.direnv
+# Maelstrom output.
+store

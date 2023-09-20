@@ -4,49 +4,86 @@ defmodule Maelstrom.Server do
   """
   use GenServer
 
+  def start_link() do
+    GenServer.start_link(__MODULE__, nil)
+  end
+
+  def process(pid, message) do
+    GenServer.call(pid, {:message, message})
+  end
+
   @impl true
   def init(_args) do
     {:ok, %{node_id: nil, next_message_id: 0}}
   end
 
   @impl true
-  def handle_call({:msg, msg}, _from, %{next_message_id: next_message_id} = state) do
-    payload = Jason.decode!(msg)
-
-    {response, state} =
-      case payload["body"]["type"] do
-        "init" ->
-          {reply, state} = initialise(payload, state)
-          {{:ok, Jason.encode!(reply)}, state}
-
-        "echo" ->
-          {reply, state} = echo(payload, state)
-          {{:ok, Jason.encode!(reply)}, state}
-
-        other ->
-          {{:error, "Unknown message type #{other}"}, state}
-      end
-
-    {:reply, response, %{state | next_message_id: next_message_id + 1}}
+  def handle_call({:message, message}, _from, state) do
+    message
+    |> Jason.decode!()
+    |> process_message(state)
+    |> create_reply()
   end
 
-  defp initialise(%{"body" => %{"node_id" => node_id}} = payload, state) do
+  defp process_message(%{"body" => %{"type" => "init"}} = message, state) do
+    initialise(message, state)
+  end
+
+  defp process_message(%{"body" => %{"type" => "echo"}} = message, state) do
+    echo(message, state)
+  end
+
+  defp process_message(%{"body" => %{"type" => message_type}}, state),
+    do: {:error, "Unknown message type #{message_type}", state}
+
+  defp create_reply({status, response, state}) do
+    response = {status, Jason.encode!(response)}
+    {:reply, response, increment_message_id(state)}
+  end
+
+  defp increment_message_id(%{next_message_id: next_message_id} = state) do
+    %{state | next_message_id: next_message_id + 1}
+  end
+
+  defp initialise(%{"body" => %{"node_id" => node_id}} = message, state) do
     IO.puts(:stderr, "Initialising node to ID #{node_id}")
 
     state = %{state | node_id: node_id}
-    reply = put_in(reply_to_sender(payload, state), ["body", "type"], "init_ok")
-    {reply, state}
+
+    response =
+      message
+      |> create_response(state)
+      |> set_type("init_ok")
+
+    {:ok, response, state}
   end
 
-  defp echo(payload, state) do
-    reply = put_in(reply_to_sender(payload, state), ["body", "type"], "echo_ok")
-    {reply, state}
+  defp echo(message, state) do
+    response =
+      message
+      |> create_response(state)
+      |> set_body("echo", message["body"]["echo"])
+      |> set_type("echo_ok")
+
+    {:ok, response, state}
   end
 
-  defp reply_to_sender(%{"src" => src, "body" => body}, state) do
-    # Set msg_id to our current next ID and set te reply-to to the payload's ID.
-    body = Map.put(%{body | "msg_id" => state[:next_message_id]}, "in_reply_to", body["msg_id"])
-    # Swap src and dest and use the new body.
-    %{"src" => state[:node_id], "dest" => src, "body" => body}
+  defp create_response(
+         %{"src" => src, "body" => %{"msg_id" => incoming_message_id}},
+         %{next_message_id: outgoing_message_id, node_id: node_id} = _state
+       ) do
+    %{"src" => node_id, "dest" => src, "body" => %{}}
+    |> set_body("msg_id", outgoing_message_id)
+    |> set_body("in_reply_to", incoming_message_id)
+  end
+
+  defp set_body(message, key, value) do
+    message
+    |> put_in(["body", key], value)
+  end
+
+  defp set_type(message, type) do
+    message
+    |> set_body("type", type)
   end
 end

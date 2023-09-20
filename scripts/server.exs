@@ -5,10 +5,11 @@
 # 3. Prints the response of the server to stdout if the server replies :ok or
 #    stderr otherwise.
 IO.puts(:stderr, "Starting server…")
-{:ok, pid} = GenServer.start_link(Maelstrom.Server, nil)
+{:ok, pid} = Maelstrom.Server.start_link()
+IO.puts(:stderr, "Server started.")
 
 Enum.each(IO.stream(:stdio, :line), fn message ->
-  case GenServer.call(pid, {:msg, message}) do
+  case Maelstrom.Server.process(pid, message) do
     {:ok, reply} -> IO.puts(reply)
     {:error, reply} -> IO.puts(:stderr, reply)
   end

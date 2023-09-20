@@ -16,7 +16,7 @@
           in
           pkgs.stdenv.mkDerivation rec {
             name = "maelstrom";
-            version = "0.2.2";
+            version = "0.2.3";
             src = pkgs.fetchzip {
               url = "https://github.com/jepsen-io/${name}/releases/download/v${version}/maelstrom.tar.bz2";
               sha256 = "sha256-v4kZbEu1l3YPFgYhLrdNZOvKBOWnq8lAJRPf1JVQWEE=";
@@ -41,7 +41,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             # For our server implementation.
-            beam.packages.erlangR25.elixir_1_14
+            beam.packages.erlangR26.elixir_1_15
             # For Maelstrom.
             maelstrom
           ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [

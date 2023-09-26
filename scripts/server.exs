@@ -8,9 +8,5 @@ IO.puts(:stderr, "Starting server…")
 {:ok, pid} = Maelstrom.Server.start_link()
 IO.puts(:stderr, "Server started.")
 
-Enum.each(IO.stream(:stdio, :line), fn message ->
-  case Maelstrom.Server.process(pid, message) do
-    {:ok, reply} -> IO.puts(reply)
-    {:error, reply} -> IO.puts(:stderr, reply)
-  end
-end)
+IO.stream(:stdio, :line)
+  |> Enum.each(&Maelstrom.Server.process(pid, &1))

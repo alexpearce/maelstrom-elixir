@@ -19,7 +19,7 @@
             version = "0.2.3";
             src = pkgs.fetchzip {
               url = "https://github.com/jepsen-io/${name}/releases/download/v${version}/maelstrom.tar.bz2";
-              sha256 = "sha256-v4kZbEu1l3YPFgYhLrdNZOvKBOWnq8lAJRPf1JVQWEE=";
+              sha256 = "sha256-mE/FIHDLYd1lxAvECZGelZtbo0xkQgMroXro+xb9bMI=";
             };
             nativeBuildInputs = [ pkgs.makeWrapper ];
             # Run the Maelstrom jar file under a JRE and include graphviz and

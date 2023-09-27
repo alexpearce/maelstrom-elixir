@@ -18,7 +18,8 @@ defmodule Maelstrom.Server do
 
   @impl true
   def init(_args) do
-    {:ok, %{node_id: nil, next_message_id: 0}}
+    state = %{node_id: nil, neighbours: nil, seen_messages: MapSet.new(), next_message_id: 0}
+    {:ok, state}
   end
 
   @impl true
@@ -30,6 +31,7 @@ defmodule Maelstrom.Server do
 
   @impl true
   def handle_info({:update_state, state_updates}, state) do
+    # log("Updating state with #{inspect(state_updates)}")
     {:noreply, Map.merge(state, state_updates)}
   end
 
@@ -64,14 +66,43 @@ defmodule Maelstrom.Server do
     {:ok, %{node_id: node_id}}
   end
 
+  defp process_message(%{type: "topology"} = envelope, %{"topology" => topology}, state) do
+    send_reply(envelope, state, type: "topology_ok")
+
+    {:ok, %{neighbours: topology[state.node_id]}}
+  end
+
   defp process_message(%{type: "echo"} = envelope, %{"echo" => echo}, state) do
     send_reply(envelope, state, type: "echo_ok", echo: echo)
 
     {:ok, %{}}
   end
 
-  defp process_message(envelope, _body, _state),
-    do: {:error, "Unknown message type in envelope: #{inspect(envelope)}"}
+  defp process_message(%{type: "read"} = envelope, _body, state) do
+    send_reply(envelope, state, type: "read_ok", messages: MapSet.to_list(state.seen_messages))
+
+    {:ok, %{}}
+  end
+
+  defp process_message(%{type: "broadcast"} = envelope, %{"message" => message}, state) do
+    if not MapSet.member?(state.seen_messages, message) do
+      state.neighbours
+      # No need to send this message back to its source as it already has it.
+      |> Enum.filter(fn neighbour -> neighbour != envelope.src end)
+      |> Enum.each(fn neighbour ->
+        send_message(neighbour, state, type: "broadcast", message: message)
+      end)
+    end
+
+    if envelope.msg_id do
+      send_reply(envelope, state, type: "broadcast_ok")
+    end
+
+    {:ok, %{seen_messages: MapSet.put(state.seen_messages, message)}}
+  end
+
+  defp process_message(envelope, body, _state),
+    do: {:error, "Unknown message type in envelope: #{inspect(envelope)}; body: #{inspect(body)}"}
 
   defp increment_message_id(state) do
     Map.update!(state, :next_message_id, &(&1 + 1))
@@ -86,6 +117,12 @@ defmodule Maelstrom.Server do
       |> Map.merge(%{msg_id: state.next_message_id, in_reply_to: envelope.msg_id})
 
     %{src: envelope.dest, dest: envelope.src, body: body}
+    |> Jason.encode!()
+    |> IO.puts()
+  end
+
+  defp send_message(dest, state, body_items) do
+    %{src: state.node_id, dest: dest, body: Map.new(body_items)}
     |> Jason.encode!()
     |> IO.puts()
   end

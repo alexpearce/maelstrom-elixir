@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+exec maelstrom test -w broadcast --bin $SCRIPT_DIR/server --time-limit 20 --rate 100 --log-stderr
